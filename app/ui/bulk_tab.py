@@ -1,4 +1,5 @@
 """Bulk TTS tab — generate many MP3 files from a list of text items."""
+
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +15,6 @@ from ..state import AppState
 from .helpers import as_controls, pick_directory, pick_text_file, snack
 from .prosody_panel import ProsodyPanel
 from .voice_panel import VoicePanel
-
 
 BULK_DELAY_SECONDS = 1.0
 
@@ -34,11 +34,11 @@ class BulkTab:
         self._voice = voice
         self._prosody = prosody
 
-        self._srt_check   = ft.Checkbox(label="Also save subtitles (.srt)", value=False)
-        self._status      = ft.Text("", color=ft.Colors.SECONDARY, italic=True)
-        self._progress    = ft.ProgressBar(visible=False, value=0)
-        self._count_text  = ft.Text("0 / 0", color=ft.Colors.SECONDARY)
-        self._eta_field   = ft.TextField(label="ETA", value="—", width=130, read_only=True)
+        self._srt_check = ft.Checkbox(label="Also save subtitles (.srt)", value=False)
+        self._status = ft.Text("", color=ft.Colors.SECONDARY, italic=True)
+        self._progress = ft.ProgressBar(visible=False, value=0)
+        self._count_text = ft.Text("0 / 0", color=ft.Colors.SECONDARY)
+        self._eta_field = ft.TextField(label="ETA", value="—", width=130, read_only=True)
         self._folder_field = ft.TextField(
             label="Output folder",
             expand=True,
@@ -48,10 +48,10 @@ class BulkTab:
 
         self._table = ft.DataTable(
             columns=[
-                ft.DataColumn(label=ft.Text("#"),            numeric=True),
+                ft.DataColumn(label=ft.Text("#"), numeric=True),
                 ft.DataColumn(label=ft.Text("Text Preview"), numeric=False),
-                ft.DataColumn(label=ft.Text("Status"),       numeric=False),
-                ft.DataColumn(label=ft.Text(""),             numeric=False),
+                ft.DataColumn(label=ft.Text("Status"), numeric=False),
+                ft.DataColumn(label=ft.Text(""), numeric=False),
             ],
             rows=[],
             show_checkbox_column=False,
@@ -78,9 +78,12 @@ class BulkTab:
 
     @staticmethod
     def _status_color(status: str) -> str:
-        if status == "Done":              return ft.Colors.GREEN
-        if status == "Generating":        return ft.Colors.BLUE
-        if status.startswith("Error"):    return ft.Colors.ERROR
+        if status == "Done":
+            return ft.Colors.GREEN
+        if status == "Generating":
+            return ft.Colors.BLUE
+        if status.startswith("Error"):
+            return ft.Colors.ERROR
         return ft.Colors.SECONDARY
 
     def _rebuild_table(self) -> None:
@@ -109,14 +112,16 @@ class BulkTab:
                     on_click=partial(self._delete_row, i),
                 ),
             ]
-            rows.append(ft.DataRow(
-                cells=[
-                    ft.DataCell(ft.Text(str(i + 1))),
-                    ft.DataCell(ft.Text(preview)),
-                    ft.DataCell(ft.Text(status, color=self._status_color(status))),
-                    ft.DataCell(ft.Row(action_controls, spacing=0)),
-                ],
-            ))
+            rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(str(i + 1))),
+                        ft.DataCell(ft.Text(preview)),
+                        ft.DataCell(ft.Text(status, color=self._status_color(status))),
+                        ft.DataCell(ft.Row(action_controls, spacing=0)),
+                    ],
+                )
+            )
 
         self._table.rows = rows
         self._count_text.value = f"{done_count} / {len(self._state.bulk_items)}"
@@ -151,21 +156,23 @@ class BulkTab:
         def on_save() -> None:
             text = (edit_field.value or "").strip()
             if text:
-                self._state.bulk_items[idx]["text"]   = text
+                self._state.bulk_items[idx]["text"] = text
                 self._state.bulk_items[idx]["status"] = "Pending"
             self._invalidate_eta()
             self._rebuild_table()
             self._page.update()
             self._page.pop_dialog()
 
-        self._page.show_dialog(ft.AlertDialog(
-            title=ft.Text(f"Edit Row {idx + 1}"),
-            content=ft.Container(content=edit_field, width=520),
-            actions=as_controls(
-                ft.FilledButton("Save",   on_click=on_save),
-                ft.TextButton("Cancel", on_click=self._page.pop_dialog),
-            ),
-        ))
+        self._page.show_dialog(
+            ft.AlertDialog(
+                title=ft.Text(f"Edit Row {idx + 1}"),
+                content=ft.Container(content=edit_field, width=520),
+                actions=as_controls(
+                    ft.FilledButton("Save", on_click=on_save),
+                    ft.TextButton("Cancel", on_click=self._page.pop_dialog),
+                ),
+            )
+        )
 
     def _delete_row(self, idx: int) -> None:
         def confirm() -> None:
@@ -175,18 +182,20 @@ class BulkTab:
             self._page.update()
             self._page.pop_dialog()
 
-        self._page.show_dialog(ft.AlertDialog(
-            title=ft.Text("Delete Row?"),
-            content=ft.Text(f"Delete row {idx + 1}? This cannot be undone.", width=380),
-            actions=as_controls(
-                ft.FilledButton(
-                    "Delete",
-                    on_click=confirm,
-                    style=ft.ButtonStyle(bgcolor=ft.Colors.ERROR),
+        self._page.show_dialog(
+            ft.AlertDialog(
+                title=ft.Text("Delete Row?"),
+                content=ft.Text(f"Delete row {idx + 1}? This cannot be undone.", width=380),
+                actions=as_controls(
+                    ft.FilledButton(
+                        "Delete",
+                        on_click=confirm,
+                        style=ft.ButtonStyle(bgcolor=ft.Colors.ERROR),
+                    ),
+                    ft.TextButton("Cancel", on_click=self._page.pop_dialog),
                 ),
-                ft.TextButton("Cancel", on_click=self._page.pop_dialog),
-            ),
-        ))
+            )
+        )
 
     def _open_add_dialog(self) -> None:
         add_field = ft.TextField(
@@ -206,14 +215,16 @@ class BulkTab:
                 self._page.update()
             self._page.pop_dialog()
 
-        self._page.show_dialog(ft.AlertDialog(
-            title=ft.Text("Add Bulk Item"),
-            content=ft.Container(content=add_field, width=520),
-            actions=as_controls(
-                ft.FilledButton("Add",    on_click=on_add),
-                ft.TextButton("Cancel", on_click=self._page.pop_dialog),
-            ),
-        ))
+        self._page.show_dialog(
+            ft.AlertDialog(
+                title=ft.Text("Add Bulk Item"),
+                content=ft.Container(content=add_field, width=520),
+                actions=as_controls(
+                    ft.FilledButton("Add", on_click=on_add),
+                    ft.TextButton("Cancel", on_click=self._page.pop_dialog),
+                ),
+            )
+        )
 
     # ── Event handlers ────────────────────────────────────────────────
 
@@ -251,21 +262,23 @@ class BulkTab:
             self._page.update()
             self._page.pop_dialog()
 
-        self._page.show_dialog(ft.AlertDialog(
-            title=ft.Text("Clear All?"),
-            content=ft.Text(f"Remove all {len(self._state.bulk_items)} item(s)?", width=300),
-            actions=as_controls(
-                ft.FilledButton(
-                    "Clear All",
-                    on_click=do_clear,
-                    style=ft.ButtonStyle(bgcolor=ft.Colors.ERROR),
+        self._page.show_dialog(
+            ft.AlertDialog(
+                title=ft.Text("Clear All?"),
+                content=ft.Text(f"Remove all {len(self._state.bulk_items)} item(s)?", width=300),
+                actions=as_controls(
+                    ft.FilledButton(
+                        "Clear All",
+                        on_click=do_clear,
+                        style=ft.ButtonStyle(bgcolor=ft.Colors.ERROR),
+                    ),
+                    ft.TextButton("Cancel", on_click=self._page.pop_dialog),
                 ),
-                ft.TextButton("Cancel", on_click=self._page.pop_dialog),
-            ),
-        ))
+            )
+        )
 
     async def _on_generate_click(self) -> None:
-        voice  = self._voice.selected_voice
+        voice = self._voice.selected_voice
         folder = (self._folder_field.value or "").strip()
 
         if not self._state.bulk_items:
@@ -282,17 +295,17 @@ class BulkTab:
             return
 
         total = len(self._state.bulk_items)
-        done  = 0
+        done = 0
         self._generate_btn.disabled = True
-        self._progress.visible      = True
-        self._progress.value        = 0
-        self._status.value          = "Starting…"
+        self._progress.visible = True
+        self._progress.value = 0
+        self._status.value = "Starting…"
         self._set_eta(None)
         self._page.update()
 
-        rate     = self._prosody.rate
-        vol      = self._prosody.vol
-        pitch    = self._prosody.pitch
+        rate = self._prosody.rate
+        vol = self._prosody.vol
+        pitch = self._prosody.pitch
         make_srt = bool(self._srt_check.value)
         total_generation_seconds = 0.0
 
@@ -329,12 +342,14 @@ class BulkTab:
             self._page.update()
 
             if remaining_items > 0:
-                self._status.value = f"Cooling down for {self._format_eta(BULK_DELAY_SECONDS)} before next item…"
+                self._status.value = (
+                    f"Cooling down for {self._format_eta(BULK_DELAY_SECONDS)} before next item…"
+                )
                 self._page.update()
                 await asyncio.sleep(BULK_DELAY_SECONDS)
 
         self._generate_btn.disabled = False
-        self._progress.visible      = False
+        self._progress.visible = False
         self._status.value = f"✓ Done — {done}/{total} file(s) generated in {folder}"
         self._page.update()
 
@@ -343,7 +358,7 @@ class BulkTab:
     def _build(self) -> ft.Column:
         items_header = as_controls(
             ft.Text("Bulk Items", theme_style=ft.TextThemeStyle.TITLE_MEDIUM, expand=True),
-            ft.OutlinedButton("➕  Add Row",     on_click=self._open_add_dialog),
+            ft.OutlinedButton("➕  Add Row", on_click=self._open_add_dialog),
             ft.OutlinedButton("📂  Import .txt", on_click=self._on_import_txt_click),
             ft.TextButton(
                 "Clear All",

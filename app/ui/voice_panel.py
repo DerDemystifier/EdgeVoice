@@ -1,4 +1,5 @@
 """Voice selection panel."""
+
 from __future__ import annotations
 
 import edge_tts
@@ -33,9 +34,9 @@ class VoicePanel:
             value="All",
             width=160,
             options=[
-                ft.DropdownOption(key="All",    text="All"),
+                ft.DropdownOption(key="All", text="All"),
                 ft.DropdownOption(key="Female", text="Female ♀"),
-                ft.DropdownOption(key="Male",   text="Male ♂"),
+                ft.DropdownOption(key="Male", text="Male ♂"),
             ],
             disabled=True,
         )
@@ -90,17 +91,17 @@ class VoicePanel:
         self._lang_dd.options = [ft.DropdownOption(key="All", text="All")] + [
             ft.DropdownOption(key=loc, text=loc) for loc in locales
         ]
-        self._lang_dd.value       = "All"
-        self._lang_dd.disabled    = False
-        self._gender_dd.disabled  = False
-        self._voice_dd.disabled   = False
+        self._lang_dd.value = "All"
+        self._lang_dd.disabled = False
+        self._gender_dd.disabled = False
+        self._voice_dd.disabled = False
         self._loading_text.visible = False
         self._refresh_voice_options()
 
     # ── Private helpers ───────────────────────────────────────────────
 
     def _filtered_voices(self) -> list:
-        lang   = self._lang_dd.value   or "All"
+        lang = self._lang_dd.value or "All"
         gender = self._gender_dd.value or "All"
         result = self._state.all_voices
         if lang != "All":

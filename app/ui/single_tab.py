@@ -1,4 +1,5 @@
 """Single-item TTS tab — generate & play or save one audio file."""
+
 from __future__ import annotations
 
 import asyncio
@@ -42,7 +43,7 @@ class SingleTab:
             expand=True,
         )
         self._progress = ft.ProgressBar(visible=False)
-        self._status   = ft.Text("", color=ft.Colors.SECONDARY, italic=True)
+        self._status = ft.Text("", color=ft.Colors.SECONDARY, italic=True)
         self._output_path_field = ft.TextField(
             label="Save MP3 to…",
             expand=True,
@@ -113,7 +114,7 @@ class SingleTab:
             snack(self._page, str(ex))
 
     async def _on_generate_play_click(self) -> None:
-        txt   = (self._text_field.value or "").strip()
+        txt = (self._text_field.value or "").strip()
         voice = self._voice.selected_voice
 
         if not txt:
@@ -138,8 +139,11 @@ class SingleTab:
             fd, tmp_path = tempfile.mkstemp(suffix=".mp3")
             os.close(fd)
             await tts.generate(
-                txt, voice,
-                self._prosody.rate, self._prosody.vol, self._prosody.pitch,
+                txt,
+                voice,
+                self._prosody.rate,
+                self._prosody.vol,
+                self._prosody.pitch,
                 tmp_path,
                 srt=bool(self._srt_check.value),
             )
@@ -164,8 +168,8 @@ class SingleTab:
             self._page.update()
 
     async def _on_save_mp3_click(self) -> None:
-        txt      = (self._text_field.value or "").strip()
-        voice    = self._voice.selected_voice
+        txt = (self._text_field.value or "").strip()
+        voice = self._voice.selected_voice
         out_path = (self._output_path_field.value or "").strip()
 
         if not txt:
@@ -184,8 +188,11 @@ class SingleTab:
 
         try:
             await tts.generate(
-                txt, voice,
-                self._prosody.rate, self._prosody.vol, self._prosody.pitch,
+                txt,
+                voice,
+                self._prosody.rate,
+                self._prosody.vol,
+                self._prosody.pitch,
                 out_path,
                 srt=bool(self._srt_check.value),
             )
@@ -223,7 +230,9 @@ class SingleTab:
             self._srt_check,
         )
         action_controls = as_controls(
-            ft.FilledButton("▶  Generate & Play", on_click=self._on_generate_play_click, expand=True),
+            ft.FilledButton(
+                "▶  Generate & Play", on_click=self._on_generate_play_click, expand=True
+            ),
             ft.OutlinedButton("💾  Save to File", on_click=self._on_save_mp3_click, expand=True),
             self._stop_btn,
         )
