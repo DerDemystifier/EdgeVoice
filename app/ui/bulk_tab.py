@@ -384,6 +384,7 @@ class BulkTab:
         )
         tab_controls: list[ft.Control] = [
             ft.Card(
+                # margin=ft.Margin.symmetric(vertical=0, horizontal=24),
                 content=ft.Container(
                     padding=16,
                     content=ft.Column(
@@ -401,6 +402,7 @@ class BulkTab:
                 ),
             ),
             ft.Card(
+                # margin=ft.Margin.symmetric(vertical=0, horizontal=24),
                 content=ft.Container(
                     padding=16,
                     content=ft.Column(spacing=8, controls=output_controls),
@@ -412,6 +414,7 @@ class BulkTab:
         ]
         return ft.Column(
             expand=True,
+            width=800,
             scroll=ft.ScrollMode.AUTO,
             spacing=12,
             controls=tab_controls,

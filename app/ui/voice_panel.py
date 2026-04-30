@@ -11,9 +11,15 @@ from ..state import AppState
 class VoicePanel:
     """Card that lets the user pick language, gender, and voice."""
 
-    def __init__(self, page: ft.Page, state: AppState) -> None:
+    def __init__(
+        self,
+        page: ft.Page,
+        state: AppState,
+        initial_settings: dict[str, object] | None = None,
+    ) -> None:
         self._page = page
         self._state = state
+        self._initial_settings = initial_settings or {}
 
         self._loading_text = ft.Text(
             "Loading voices…",
@@ -59,6 +65,7 @@ class VoicePanel:
             self._voice_dd,
         ]
         self._card = ft.Card(
+            margin=ft.Margin.symmetric(vertical=0, horizontal=24),
             content=ft.Container(
                 padding=16,
                 content=ft.Column(spacing=10, controls=col_controls),
@@ -76,6 +83,14 @@ class VoicePanel:
         v = self._voice_dd.value
         return v if v else None
 
+    @property
+    def selected_language(self) -> str:
+        return self._lang_dd.value or "All"
+
+    @property
+    def selected_gender(self) -> str:
+        return self._gender_dd.value or "All"
+
     async def load_voices(self) -> None:
         """Fetch voices from edge-tts and populate the dropdowns."""
         try:
@@ -91,11 +106,15 @@ class VoicePanel:
         self._lang_dd.options = [ft.DropdownOption(key="All", text="All")] + [
             ft.DropdownOption(key=loc, text=loc) for loc in locales
         ]
-        self._lang_dd.value = "All"
+        self._lang_dd.value = self._saved_language(locales)
+        self._gender_dd.value = self._saved_gender()
         self._lang_dd.disabled = False
         self._gender_dd.disabled = False
         self._voice_dd.disabled = False
         self._loading_text.visible = False
+        saved_voice = self._initial_settings.get("voice")
+        if isinstance(saved_voice, str):
+            self._voice_dd.value = saved_voice
         self._refresh_voice_options()
 
     # ── Private helpers ───────────────────────────────────────────────
@@ -123,3 +142,13 @@ class VoicePanel:
         if self._voice_dd.value not in current_keys:
             self._voice_dd.value = filtered[0]["ShortName"] if filtered else None
         self._page.update()
+
+    def _saved_gender(self) -> str:
+        value = self._initial_settings.get("gender")
+        return value if value in {"All", "Female", "Male"} else "All"
+
+    def _saved_language(self, locales: list[str]) -> str:
+        value = self._initial_settings.get("language")
+        if value == "All":
+            return "All"
+        return value if isinstance(value, str) and value in locales else "All"

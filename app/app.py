@@ -54,8 +54,8 @@ def main(page: ft.Page) -> None:
     bulk_tab = BulkTab(page, state, voice_panel, prosody_panel)
 
     tab_contents: list[ft.Control] = [
-        ft.Container(content=single_tab.content, padding=ft.Padding.only(top=16)),
-        ft.Container(content=bulk_tab.content, padding=ft.Padding.only(top=16)),
+        ft.Container(content=single_tab.content, padding=ft.Padding.symmetric(vertical=8, horizontal=24)),
+        ft.Container(content=bulk_tab.content, padding=ft.Padding.symmetric(vertical=8, horizontal=24)),
     ]
     tabs = ft.Tabs(
         selected_index=0,
@@ -122,6 +122,7 @@ def main(page: ft.Page) -> None:
     page.on_close = _on_close
 
     header = ft.Row(
+        margin=ft.Margin.symmetric(vertical=8, horizontal=24),
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         controls=as_controls(
             ft.Text(APP_TITLE, theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
