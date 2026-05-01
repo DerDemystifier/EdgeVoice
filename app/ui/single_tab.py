@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-import os
-import tempfile
-from pathlib import Path
-
 import flet as ft
 import flet_audio as fta
 from flet_audio.types import AudioStateChangeEvent
@@ -27,13 +22,12 @@ class SingleTab:
         state: AppState,
         voice: VoicePanel,
         prosody: ProsodyPanel,
-        audio: fta.Audio,
     ) -> None:
         self._page = page
         self._state = state
         self._voice = voice
         self._prosody = prosody
-        self._audio = audio
+        self._audio: fta.Audio | None = None
 
         self._text_field = ft.TextField(
             label="Text to synthesise",
@@ -58,8 +52,6 @@ class SingleTab:
             visible=False,
             on_click=self._on_stop_click,
         )
-
-        audio.on_state_change = self._on_audio_state_change
 
         self._content = self._build()
 
@@ -86,10 +78,11 @@ class SingleTab:
         self._page.update()
 
     async def _on_stop_click(self) -> None:
-        try:
-            await self._audio.pause()
-        except Exception:
-            pass
+        if self._audio is not None:
+            try:
+                await self._audio.pause()
+            except Exception:
+                pass
         self._stop_btn.visible = False
         self._status.value = "Stopped."
         self._page.update()
@@ -116,6 +109,7 @@ class SingleTab:
     async def _on_generate_play_click(self) -> None:
         txt = (self._text_field.value or "").strip()
         voice = self._voice.selected_voice
+        out_path = (self._output_path_field.value or "").strip()
 
         if not txt:
             snack(self._page, "Please enter some text first.")
@@ -123,45 +117,48 @@ class SingleTab:
         if not voice:
             snack(self._page, "Please select a voice.")
             return
+        if not out_path:
+            snack(self._page, "Please choose a save location (click Browse…).")
+            return
 
         self._set_busy(True)
         self._status.value = "Generating audio…"
         self._page.update()
 
         try:
-            if self._state.prev_tmp:
-                try:
-                    os.unlink(self._state.prev_tmp[0])
-                except Exception:
-                    pass
-                self._state.prev_tmp.clear()
-
-            fd, tmp_path = tempfile.mkstemp(suffix=".mp3")
-            os.close(fd)
             await tts.generate(
                 txt,
                 voice,
                 self._prosody.rate,
                 self._prosody.vol,
                 self._prosody.pitch,
-                tmp_path,
+                out_path,
                 srt=bool(self._srt_check.value),
             )
-            self._state.prev_tmp.append(tmp_path)
 
-            try:
-                await self._audio.pause()
-            except Exception:
-                pass
-            self._audio.src = Path(tmp_path).as_uri()
+            self._status.value = "Starting playback…"
             self._page.update()
-            await asyncio.sleep(0.25)
-            await self._audio.play()
+
+            # Remove previous audio service and create a fresh one with the
+            # real src set in the constructor — required for Flutter's audioplayer
+            # to initialise correctly.  autoplay=True triggers playback during
+            # Flutter's own init/update cycle so no invoke_method is needed.
+            if self._audio is not None and self._audio in self._page.services:
+                self._page.services.remove(self._audio)
+            self._audio = fta.Audio(
+                src=out_path,
+                autoplay=True,
+                volume=1.0,
+                release_mode=fta.ReleaseMode.STOP,
+                on_state_change=self._on_audio_state_change,
+            )
+            self._page.services.append(self._audio)
+            self._page.update()
 
             self._stop_btn.visible = True
             self._status.value = "Playing…"
         except Exception as ex:
-            snack(self._page, f"Error generating audio: {ex}")
+            snack(self._page, f"Error generating or playing audio: {ex}")
             self._status.value = "Error."
         finally:
             self._set_busy(False)

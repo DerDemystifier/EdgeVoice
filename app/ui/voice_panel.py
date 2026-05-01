@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
+import tempfile
+
 import edge_tts
 import flet as ft
+import flet_audio as fta
 
+from .. import tts
+from ..constants import (
+    PREVIEW_TIMEOUT_SECONDS,
+    get_preview_phrase,
+)
 from ..state import AppState
+from .helpers import as_controls, snack
+from .prosody_panel import ProsodyPanel
 
 
 class VoicePanel:
@@ -15,10 +27,13 @@ class VoicePanel:
         self,
         page: ft.Page,
         state: AppState,
+        prosody: ProsodyPanel,
         initial_settings: dict[str, object] | None = None,
     ) -> None:
         self._page = page
         self._state = state
+        self._prosody = prosody
+        self._audio: fta.Audio | None = None
         self._initial_settings = initial_settings or {}
 
         self._loading_text = ft.Text(
@@ -54,6 +69,12 @@ class VoicePanel:
             disabled=True,
             hint_text="Select a voice…",
         )
+        self._preview_btn = ft.IconButton(
+            icon=ft.Icons.PLAY_CIRCLE_OUTLINED,
+            tooltip="Preview selected voice",
+            disabled=True,
+            on_click=self._on_preview_click,
+        )
 
         self._lang_dd.on_select = self._refresh_voice_options
         self._gender_dd.on_select = self._refresh_voice_options
@@ -61,8 +82,8 @@ class VoicePanel:
         col_controls: list[ft.Control] = [
             ft.Text("Voice Selection", theme_style=ft.TextThemeStyle.TITLE_MEDIUM),
             self._loading_text,
-            ft.Row(controls=[self._lang_dd, self._gender_dd], spacing=10),
-            self._voice_dd,
+            ft.Row(controls=as_controls(self._lang_dd, self._gender_dd), spacing=10),
+            ft.Row(controls=as_controls(self._voice_dd, self._preview_btn), spacing=10),
         ]
         self._card = ft.Card(
             margin=ft.Margin.symmetric(vertical=0, horizontal=24),
@@ -141,14 +162,90 @@ class VoicePanel:
         current_keys = {v["ShortName"] for v in filtered}
         if self._voice_dd.value not in current_keys:
             self._voice_dd.value = filtered[0]["ShortName"] if filtered else None
+        self._preview_btn.disabled = self.selected_voice is None
         self._page.update()
 
     def _saved_gender(self) -> str:
         value = self._initial_settings.get("gender")
-        return value if value in {"All", "Female", "Male"} else "All"
+        return value if isinstance(value, str) and value in {"All", "Female", "Male"} else "All"
 
     def _saved_language(self, locales: list[str]) -> str:
         value = self._initial_settings.get("language")
         if value == "All":
             return "All"
         return value if isinstance(value, str) and value in locales else "All"
+
+    async def _on_preview_click(self) -> None:
+        voice = self.selected_voice
+        if not voice:
+            snack(self._page, "Please select a voice.")
+            return
+
+        phrase = get_preview_phrase(self.selected_language)
+        self._preview_btn.disabled = True
+        self._preview_btn.tooltip = "Generating…"
+        self._page.update()
+        tmp_path: str | None = None
+
+        try:
+            self._cleanup_temp_audio()
+
+            fd, tmp_path = tempfile.mkstemp(suffix=".mp3")
+            os.close(fd)
+            try:
+                await asyncio.wait_for(
+                    tts.generate(
+                        phrase,
+                        voice,
+                        self._prosody.rate,
+                        self._prosody.vol,
+                        self._prosody.pitch,
+                        tmp_path,
+                    ),
+                    timeout=PREVIEW_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                snack(
+                    self._page,
+                    "Preview generation timed out while contacting the Edge TTS service. Please try again.",
+                )
+                return
+            self._state.prev_tmp.append(tmp_path)
+
+            # Remove previous preview audio and create a fresh one with the
+            # real src set in the constructor (required for correct init).
+            # autoplay=True triggers playback inside Flutter's own init cycle.
+            if self._audio is not None and self._audio in self._page.services:
+                self._page.services.remove(self._audio)
+            self._audio = fta.Audio(
+                src=tmp_path,
+                autoplay=True,
+                volume=1.0,
+                release_mode=fta.ReleaseMode.STOP,
+            )
+            self._page.services.append(self._audio)
+            self._page.update()
+        except TimeoutError:
+            snack(
+                self._page,
+                "Preview playback timed out while preparing or starting audio. Please try again.",
+            )
+        except Exception as ex:
+            snack(self._page, f"Error previewing voice: {ex}")
+        finally:
+            if tmp_path and tmp_path not in self._state.prev_tmp:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+            self._preview_btn.disabled = self.selected_voice is None
+            self._preview_btn.tooltip = "Preview selected voice"
+            self._page.update()
+
+    def _cleanup_temp_audio(self) -> None:
+        for path in self._state.prev_tmp:
+            try:
+                os.unlink(path)
+            except Exception:
+                pass
+        self._state.prev_tmp.clear()

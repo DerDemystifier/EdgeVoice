@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import flet as ft
-import flet_audio as fta
 
 from . import settings
 from .constants import APP_TITLE
@@ -36,21 +35,19 @@ def main(page: ft.Page) -> None:
 
     state = AppState()
 
-    audio = fta.Audio(
-        src="",
-        autoplay=False,
-        volume=1.0,
-        release_mode=fta.ReleaseMode.STOP,
-    )
-
     prosody_panel = ProsodyPanel(page)
     prosody_panel.apply(
         _read_float_setting("rate"),
         _read_float_setting("vol"),
         _read_float_setting("pitch"),
     )
-    voice_panel = VoicePanel(page, state, initial_settings=loaded_settings)
-    single_tab = SingleTab(page, state, voice_panel, prosody_panel, audio)
+    voice_panel = VoicePanel(
+        page,
+        state,
+        prosody=prosody_panel,
+        initial_settings=loaded_settings,
+    )
+    single_tab = SingleTab(page, state, voice_panel, prosody_panel)
     bulk_tab = BulkTab(page, state, voice_panel, prosody_panel)
 
     tab_contents: list[ft.Control] = [

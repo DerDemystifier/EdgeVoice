@@ -25,10 +25,12 @@ def as_controls(*controls: ft.Control) -> list[ft.Control]:
 
 def snack(page: ft.Page, msg: str, error: bool = True) -> None:
     """Show a SnackBar with *msg*."""
+    bg_color = ft.Colors.ERROR_CONTAINER if error else ft.Colors.SECONDARY_CONTAINER
+    text_color = ft.Colors.ON_ERROR_CONTAINER if error else ft.Colors.ON_SECONDARY_CONTAINER
     page.show_dialog(
         ft.SnackBar(
-            content=ft.Text(msg),
-            bgcolor=ft.Colors.ERROR_CONTAINER if error else ft.Colors.SECONDARY_CONTAINER,
+            content=ft.Text(msg, color=text_color),
+            bgcolor=bg_color,
         )
     )
 
