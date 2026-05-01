@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import pathlib
 import tempfile
 
 import edge_tts
@@ -17,7 +18,6 @@ from ..constants import (
 )
 from ..state import AppState
 from .helpers import as_controls, snack
-from .prosody_panel import ProsodyPanel
 
 
 class VoicePanel:
@@ -27,12 +27,10 @@ class VoicePanel:
         self,
         page: ft.Page,
         state: AppState,
-        prosody: ProsodyPanel,
         initial_settings: dict[str, object] | None = None,
     ) -> None:
         self._page = page
         self._state = state
-        self._prosody = prosody
         self._audio: fta.Audio | None = None
         self._initial_settings = initial_settings or {}
 
@@ -182,70 +180,75 @@ class VoicePanel:
             return
 
         phrase = get_preview_phrase(self.selected_language)
-        self._preview_btn.disabled = True
-        self._preview_btn.tooltip = "Generating…"
-        self._page.update()
-        tmp_path: str | None = None
+        cache_path = self._preview_cache_path(voice)
 
-        try:
-            self._cleanup_temp_audio()
+        if not (cache_path.exists() and cache_path.stat().st_size > 0):
+            self._preview_btn.disabled = True
+            self._preview_btn.tooltip = "Generating…"
+            self._page.update()
 
-            fd, tmp_path = tempfile.mkstemp(suffix=".mp3")
-            os.close(fd)
             try:
-                await asyncio.wait_for(
-                    tts.generate(
-                        phrase,
-                        voice,
-                        self._prosody.rate,
-                        self._prosody.vol,
-                        self._prosody.pitch,
-                        tmp_path,
-                    ),
-                    timeout=PREVIEW_TIMEOUT_SECONDS,
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                fd, tmp_path = tempfile.mkstemp(
+                    suffix=".mp3", dir=cache_path.parent
                 )
+                os.close(fd)
+                try:
+                    await asyncio.wait_for(
+                        tts.generate(
+                            phrase,
+                            voice,
+                            tts.fmt_rate(0),
+                            tts.fmt_vol(0),
+                            tts.fmt_pitch(0),
+                            tmp_path,
+                        ),
+                        timeout=PREVIEW_TIMEOUT_SECONDS,
+                    )
+                    os.replace(tmp_path, cache_path)
+                except BaseException:
+                    try:
+                        os.unlink(tmp_path)
+                    except OSError:
+                        pass
+                    raise
             except TimeoutError:
                 snack(
                     self._page,
-                    "Preview generation timed out while contacting the Edge TTS service. Please try again.",
+                    "Preview timed out while contacting the Edge TTS service. Please try again.",
                 )
+                self._preview_btn.disabled = self.selected_voice is None
+                self._preview_btn.tooltip = "Preview selected voice"
+                self._page.update()
                 return
-            self._state.prev_tmp.append(tmp_path)
+            except Exception as ex:
+                snack(self._page, f"Error generating preview: {ex}")
+                self._preview_btn.disabled = self.selected_voice is None
+                self._preview_btn.tooltip = "Preview selected voice"
+                self._page.update()
+                return
+            finally:
+                self._preview_btn.disabled = self.selected_voice is None
+                self._preview_btn.tooltip = "Preview selected voice"
 
-            # Remove previous preview audio and create a fresh one with the
-            # real src set in the constructor (required for correct init).
-            # autoplay=True triggers playback inside Flutter's own init cycle.
+        try:
             if self._audio is not None and self._audio in self._page.services:
                 self._page.services.remove(self._audio)
             self._audio = fta.Audio(
-                src=tmp_path,
+                src=str(cache_path),
                 autoplay=True,
                 volume=1.0,
                 release_mode=fta.ReleaseMode.STOP,
             )
             self._page.services.append(self._audio)
             self._page.update()
-        except TimeoutError:
-            snack(
-                self._page,
-                "Preview playback timed out while preparing or starting audio. Please try again.",
-            )
         except Exception as ex:
-            snack(self._page, f"Error previewing voice: {ex}")
+            snack(self._page, f"Error playing preview: {ex}")
         finally:
-            if tmp_path and tmp_path not in self._state.prev_tmp:
-                try:
-                    os.unlink(tmp_path)
-                except Exception:
-                    pass
             self._preview_btn.disabled = self.selected_voice is None
             self._preview_btn.tooltip = "Preview selected voice"
             self._page.update()
 
-    def _cleanup_temp_audio(self) -> None:
-        for path in self._state.prev_tmp:
-            try:
-                os.unlink(path)
-            except Exception:
-                pass
-        self._state.prev_tmp.clear()
+    def _preview_cache_path(self, voice: str) -> pathlib.Path:
+        filename = f"{voice}.mp3"
+        return pathlib.Path(__file__).parents[2] / "samples" / filename

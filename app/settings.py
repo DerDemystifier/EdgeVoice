@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
-CONFIG_PATH = Path.home() / ".edgevox" / "config.json"
+CONFIG_PATH = Path(__file__).parents[1] / "config.json"
 
 
 def load() -> dict[str, Any]:

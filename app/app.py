@@ -44,7 +44,6 @@ def main(page: ft.Page) -> None:
     voice_panel = VoicePanel(
         page,
         state,
-        prosody=prosody_panel,
         initial_settings=loaded_settings,
     )
     single_tab = SingleTab(page, state, voice_panel, prosody_panel)
