@@ -239,6 +239,13 @@ class BulkTab:
                 self._invalidate_eta()
                 self._rebuild_table()
                 self._page.update()
+                added_count = len(lines)
+                line_label = "line" if added_count == 1 else "lines"
+                snack(
+                    self._page,
+                    f"Added {added_count} {line_label} from {os.path.basename(path)}.",
+                    error=False,
+                )
             except Exception as ex:
                 snack(self._page, f"Could not read file: {ex}")
 
