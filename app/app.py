@@ -25,6 +25,7 @@ def main(page: ft.Page) -> None:
             return 0.0
 
     page.title = APP_TITLE
+    page.run_task(page.window.center)
     page.window.width = 960
     page.window.height = 860
     page.scroll = ft.ScrollMode.AUTO
@@ -99,7 +100,7 @@ def main(page: ft.Page) -> None:
             else ft.Icons.LIGHT_MODE_OUTLINED
         )
 
-    def _toggle_theme(_: ft.ControlEvent) -> None:
+    def _toggle_theme() -> None:
         page.theme_mode = (
             ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK
         )
@@ -107,7 +108,7 @@ def main(page: ft.Page) -> None:
         _persist_settings(show_error=True)
         page.update()
 
-    def _on_close(_: ft.ControlEvent) -> None:
+    def _on_close() -> None:
         _persist_settings()
 
     theme_button = ft.IconButton(

@@ -86,6 +86,10 @@ class BulkTab:
             return ft.Colors.ERROR
         return ft.Colors.SECONDARY
 
+    @staticmethod
+    def _is_error_status(status: str) -> bool:
+        return status.startswith("Error")
+
     def _rebuild_table(self) -> None:
         rows: list[ft.DataRow] = []
         done_count = 0
@@ -284,12 +288,37 @@ class BulkTab:
             )
         )
 
+    def _on_retry_errors_click(self) -> None:
+        retry_count = 0
+        for item in self._state.bulk_items:
+            if self._is_error_status(item["status"]):
+                item["status"] = "Pending"
+                retry_count += 1
+
+        if retry_count == 0:
+            snack(self._page, "No failed items to retry.", error=False)
+            return
+
+        self._invalidate_eta()
+        self._rebuild_table()
+        self._page.update()
+        item_label = "item" if retry_count == 1 else "items"
+        snack(self._page, f"Re-queued {retry_count} failed {item_label}.", error=False)
+
     async def _on_generate_click(self) -> None:
         voice = self._voice.selected_voice
         folder = (self._folder_field.value or "").strip()
+        queued_items = [
+            (index, item)
+            for index, item in enumerate(self._state.bulk_items)
+            if item["status"] == "Pending"
+        ]
 
         if not self._state.bulk_items:
             snack(self._page, "No items to generate.")
+            return
+        if not queued_items:
+            snack(self._page, "No queued items to generate.", error=False)
             return
         if not voice:
             snack(self._page, "Please select a voice.")
@@ -301,7 +330,7 @@ class BulkTab:
             snack(self._page, "Output folder does not exist.")
             return
 
-        total = len(self._state.bulk_items)
+        total = len(queued_items)
         done = 0
         self._generate_btn.disabled = True
         self._progress.visible = True
@@ -316,13 +345,13 @@ class BulkTab:
         make_srt = bool(self._srt_check.value)
         total_generation_seconds = 0.0
 
-        for i, item in enumerate(self._state.bulk_items):
+        for i, (item_index, item) in enumerate(queued_items):
             item["status"] = "Generating"
             self._rebuild_table()
             self._status.value = f"Processing {i + 1} / {total}…"
             self._page.update()
 
-            filename = f"{i + 1:03d}_{tts.sanitize_name(item['text'])}.mp3"
+            filename = f"{item_index + 1:03d}_{tts.sanitize_name(item['text'])}.mp3"
             out_path = os.path.join(folder, filename)
             item_started = perf_counter()
 
@@ -357,7 +386,7 @@ class BulkTab:
 
         self._generate_btn.disabled = False
         self._progress.visible = False
-        self._status.value = f"✓ Done — {done}/{total} file(s) generated in {folder}"
+        self._status.value = f"✓ Finished — {done}/{total} queued item(s) generated in {folder}"
         self._page.update()
 
     # ── Layout ────────────────────────────────────────────────────────
@@ -367,6 +396,7 @@ class BulkTab:
             ft.Text("Bulk Items", theme_style=ft.TextThemeStyle.TITLE_MEDIUM, expand=True),
             ft.OutlinedButton("➕  Add Row", on_click=self._open_add_dialog),
             ft.OutlinedButton("📂  Import .txt", on_click=self._on_import_txt_click),
+            ft.OutlinedButton("↻  Retry Errors", on_click=self._on_retry_errors_click),
             ft.TextButton(
                 "Clear All",
                 on_click=self._on_clear_all_click,
