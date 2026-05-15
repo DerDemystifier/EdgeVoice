@@ -1,0 +1,4 @@
+theme: jekyll-theme-cayman
+title: EdgeVoice
+description: Desktop text-to-speech app built with Flet and edge-tts.
+show_downloads: true
