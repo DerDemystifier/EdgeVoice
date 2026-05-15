@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-APP_TITLE = "EdgeVox"
+APP_TITLE = "EdgeVoice"
 PLAYBACK_COMMAND_TIMEOUT_SECONDS = 5.0
 PREVIEW_TIMEOUT_SECONDS = 12.0
 
