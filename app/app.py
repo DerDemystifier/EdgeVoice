@@ -36,7 +36,6 @@ def main(page: ft.Page) -> None:
     except Exception:
         # Best-effort only; avoid crashing if Path resolution fails
         pass
-    page.run_task(page.window.center)
     page.window.width = 960
     page.window.height = 860
     page.scroll = ft.ScrollMode.AUTO
