@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import flet as ft
+from pathlib import Path
 
 from . import settings
 from .constants import APP_TITLE
@@ -25,6 +26,16 @@ def main(page: ft.Page) -> None:
             return 0.0
 
     page.title = APP_TITLE
+    # Default icon path (fallback) then try to set a project-local icon for the native window
+    icon_path: str = "icon.ico"
+    try:
+        project_root = Path(__file__).resolve().parents[1]
+        icon_path = str(project_root.joinpath(icon_path))
+        if Path(icon_path).exists():
+            page.window.icon = icon_path
+    except Exception:
+        # Best-effort only; avoid crashing if Path resolution fails
+        pass
     page.run_task(page.window.center)
     page.window.width = 960
     page.window.height = 860
@@ -51,8 +62,12 @@ def main(page: ft.Page) -> None:
     bulk_tab = BulkTab(page, state, voice_panel, prosody_panel)
 
     tab_contents: list[ft.Control] = [
-        ft.Container(content=single_tab.content, padding=ft.Padding.symmetric(vertical=8, horizontal=24)),
-        ft.Container(content=bulk_tab.content, padding=ft.Padding.symmetric(vertical=8, horizontal=24)),
+        ft.Container(
+            content=single_tab.content, padding=ft.Padding.symmetric(vertical=8, horizontal=24)
+        ),
+        ft.Container(
+            content=bulk_tab.content, padding=ft.Padding.symmetric(vertical=8, horizontal=24)
+        ),
     ]
     tabs = ft.Tabs(
         selected_index=0,
@@ -93,7 +108,12 @@ def main(page: ft.Page) -> None:
             if show_error:
                 snack(page, f"Failed to save settings: {ex}")
 
+    # Declare theme_button early so static analysis (Pylance) knows the name exists
+    theme_button: ft.IconButton | None = None
+
     def _sync_theme_button() -> None:
+        if theme_button is None:
+            return
         theme_button.icon = (
             ft.Icons.DARK_MODE_OUTLINED
             if page.theme_mode == ft.ThemeMode.LIGHT
@@ -118,11 +138,24 @@ def main(page: ft.Page) -> None:
     _sync_theme_button()
     page.on_close = _on_close
 
+    # Header with icon next to title
     header = ft.Row(
         margin=ft.Margin.symmetric(vertical=8, horizontal=24),
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         controls=as_controls(
-            ft.Text(APP_TITLE, theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+            ft.Row(
+                controls=as_controls(
+                    # use same icon file as window where possible
+                    ft.Image(
+                        src=icon_path if "icon_path" in locals() else "icon.ico",
+                        width=28,
+                        height=28,
+                    ),
+                    ft.Text(APP_TITLE, theme_style=ft.TextThemeStyle.HEADLINE_MEDIUM),
+                ),
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
             ft.Row(controls=as_controls(theme_button)),
         ),
     )
