@@ -3,18 +3,46 @@ title: EdgeVoice
 description: Desktop text-to-speech app built with Flet and edge-tts.
 ---
 
+<p align="center">
+  <img src="./media/images/hero.png" alt="EdgeVoice hero" style="max-width:100%; height:auto;">
+</p>
+
 # EdgeVoice
 
-EdgeVoice is a desktop text-to-speech app built with [Flet](https://flet.dev/) and [`edge-tts`](https://github.com/rany2/edge-tts).
+A desktop text-to-speech app that converts text into speech using Microsoft Edge's neural voices.
 
-## What it does
+Use a clean interface to preview voices, adjust speech settings, export single files, or batch-process text lists.
 
-- Generate Microsoft Edge neural voices as MP3 files
-- Preview voices before exporting
-- Tune rate, volume, and pitch
-- Generate one file or batch-process text lists
-- Save theme and voice settings between sessions
+## Why EdgeVoice
 
-## Getting the app
+- High-quality Microsoft Edge neural voices
+- Instant voice preview before export
+- Fine-grained control over rate, volume, and pitch
+- Save spoken audio as MP3
+- Export matching subtitle files when needed
+- Light and dark themes with saved preferences
 
-See the repository README for installation and usage details.
+## Main features
+
+### Single voice export
+
+- Enter text directly or load from a `.txt` file
+- Choose language, gender, and voice
+- Adjust prosody for natural-sounding speech
+- Generate and play audio right away
+
+### Batch generation
+
+- Add items manually or import a text list
+- Edit, delete, or retry individual rows
+- Export multiple MP3 files to a folder
+- Monitor progress and estimated completion time
+
+### Voice discovery
+
+- Filter available voices by language and gender
+- Listen before you save
+
+## Who it’s for
+
+Creators, narrators, accessibility users, and anyone who wants a simple, friendly way to turn text into speech using Microsoft Edge voices.
