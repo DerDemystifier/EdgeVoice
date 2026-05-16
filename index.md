@@ -4,12 +4,12 @@ description: Desktop text-to-speech app built with Flet and edge-tts.
 ---
 
 <p align="center">
-  <img src="./media/images/hero.png" alt="EdgeVoice hero" style="max-width:100%; height:auto;">
+  <img src="./media/images/hero_smaller.png" alt="EdgeVoice hero" style="max-width:100%; height:auto;">
 </p>
 
 # EdgeVoice
 
-A desktop text-to-speech app that converts text into speech using Microsoft Edge's neural voices.
+A GUI desktop text-to-speech app that converts text into speech using Microsoft Edge's neural voices.
 
 Use a clean interface to preview voices, adjust speech settings, export single files, or batch-process text lists.
 
@@ -42,6 +42,15 @@ Use a clean interface to preview voices, adjust speech settings, export single f
 
 - Filter available voices by language and gender
 - Listen before you save
+
+
+---
+
+<p align="center">
+<img src="./media/images/screenshot_1.png" alt="EdgeVoice screenshot" width="65%">
+</p>
+
+---
 
 ## Who it’s for
 

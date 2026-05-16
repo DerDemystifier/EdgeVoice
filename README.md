@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://flet.dev"><img src="./media/images/hero.png" height="150" alt="Flet logo"></a>
+  <a href="https://flet.dev"><img src="./media/images/hero_smaller.png" height="150" alt="Flet logo"></a>
 </p>
 
 <p align="center">
@@ -8,14 +8,13 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/python-%3E%3D3.9-blue?style=flat-square" alt="Python version badge">
-<img src="https://img.shields.io/badge/build-passing-brightgreen?style=flat-square
-" alt="Build status badge">
+<img src="https://img.shields.io/badge/build-passing-brightgreen?style=flat-square" alt="Build status badge">
 <img src="https://img.shields.io/badge/license-BSD%E2%80%933%E2%80%93Clause-blue?style=flat-square" alt="License badge">
 </p>
 
 ---
 
-A desktop text-to-speech app built with [Flet](https://flet.dev/) and [`edge-tts`](https://github.com/rany2/edge-tts) for generating Microsoft Edge neural voices as MP3 files.
+A GUI desktop text-to-speech app built with [Flet](https://flet.dev/) and [`edge-tts`](https://github.com/rany2/edge-tts) for generating Microsoft Edge neural voices as MP3 files.
 
 EdgeVoice gives you a clean GUI for:
 
@@ -55,6 +54,12 @@ EdgeVoice gives you a clean GUI for:
 
 - Persist theme, voice, and prosody settings in `config.json`
 - Light and dark mode toggle
+
+---
+
+<p align="center">
+<img src="./media/images/screenshot_1.png" alt="EdgeVoice screenshot" width="65%">
+</p>
 
 ---
 
