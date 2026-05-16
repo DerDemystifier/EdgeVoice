@@ -7,6 +7,14 @@ description: Desktop text-to-speech app built with Flet and edge-tts.
   <img src="./media/images/hero_smaller.png" alt="EdgeVoice hero" style="max-width:100%; height:auto;">
 </p>
 
+<p align="center">
+  <a href="https://github.com/DerDemystifier/EdgeVoice/releases/download/v1.0.0/EdgeVoice_v1.0.0.zip" target="_blank" style="text-decoration:none;">
+    <span style="display:inline-block; background:linear-gradient(90deg,#0078d4,#005fa3); color:#fff; font-weight:600; padding:0.55em 2.2em; border-radius:1em; font-size:1.25em; box-shadow:0 2px 8px rgba(0,0,0,0.08); transition:background 0.2s;">
+      ⬇️ Download ZIP
+    </span>
+  </a>
+</p>
+
 # EdgeVoice
 
 A GUI desktop text-to-speech app that converts text into speech using Microsoft Edge's neural voices.
