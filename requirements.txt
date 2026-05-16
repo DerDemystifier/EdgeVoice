@@ -1,3 +1,4 @@
 edge-tts
 flet[all]
 flet-audio
+certifi
