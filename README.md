@@ -126,10 +126,3 @@ If you plan to contribute:
 3. Make your changes
 4. Test the app locally
 5. Open a pull request with a clear description
-
----
-
-## License
-
-No license file is currently included in this repository.
-If you plan to publish or accept outside contributions, adding a license is a very good next move.
