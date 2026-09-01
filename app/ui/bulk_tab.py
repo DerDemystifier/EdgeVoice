@@ -351,7 +351,10 @@ class BulkTab:
             self._status.value = f"Processing {i + 1} / {total}…"
             self._page.update()
 
-            filename = f"{item_index + 1:03d}_{tts.sanitize_name(item['text'])}.mp3"
+            voice_name = tts.sanitize_name(voice)
+            filename = (
+                f"{item_index + 1:03d}_{tts.sanitize_name(item['text'])}_{voice_name}.mp3"
+            )
             out_path = os.path.join(folder, filename)
             item_started = perf_counter()
 
