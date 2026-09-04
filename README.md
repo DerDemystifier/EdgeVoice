@@ -43,6 +43,7 @@ EdgeVoice gives you a clean GUI for:
 - Edit or delete individual rows before generation
 - Retry only failed rows
 - Generate all pending rows into a selected output folder
+- Stop an ongoing bulk generation and keep unfinished rows queued
 - Track progress, completed item count, and estimated remaining time
 
 ### Voice workflow
@@ -89,6 +90,26 @@ or
 python main.py
 ```
 
+## Building the Windows app
+
+Build the packaged desktop application from the repository root after installing the dependencies.
+The PyInstaller spec includes `icon.ico` both as the executable icon and as a runtime file so Flet
+can use it for the window and taskbar icon.
+
+### VS Code
+
+Run the **Build EdgeVoice (PyInstaller)** task from the Command Palette. The packaged application
+will be created at `dist\EdgeVoice\EdgeVoice.exe`.
+
+### PowerShell
+
+```powershell
+& .\.venv\Scripts\pyinstaller.exe --noconfirm EdgeVoice.spec
+```
+
+The `dist\EdgeVoice` folder contains the executable and its runtime files. Run
+`dist\EdgeVoice\EdgeVoice.exe` to launch the packaged app.
+
 ---
 
 ## Usage
@@ -111,7 +132,7 @@ python main.py
 3. Choose an output folder.
 4. Optionally enable subtitle export.
 5. Click **Bulk Generate**.
-6. Monitor the progress bar, completed count, and ETA.
+6. Monitor the progress bar, completed count, and ETA, or click **Stop** to cancel.
 
 ---
 

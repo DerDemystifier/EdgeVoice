@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import flet as ft
+import sys
 from pathlib import Path
+
+import flet as ft
 
 from . import settings
 from .constants import APP_TITLE
@@ -13,6 +15,12 @@ from .ui.helpers import as_controls, snack
 from .ui.prosody_panel import ProsodyPanel
 from .ui.single_tab import SingleTab
 from .ui.voice_panel import VoicePanel
+
+
+def _icon_path() -> str:
+    frozen_root = getattr(sys, "_MEIPASS", None)
+    root = Path(frozen_root) if frozen_root else Path(__file__).resolve().parents[1]
+    return str(root / "icon.ico")
 
 
 def main(page: ft.Page) -> None:
@@ -26,11 +34,8 @@ def main(page: ft.Page) -> None:
             return 0.0
 
     page.title = APP_TITLE
-    # Default icon path (fallback) then try to set a project-local icon for the native window
-    icon_path: str = "icon.ico"
+    icon_path = _icon_path()
     try:
-        project_root = Path(__file__).resolve().parents[1]
-        icon_path = str(project_root.joinpath(icon_path))
         if Path(icon_path).exists():
             page.window.icon = icon_path
     except Exception:
