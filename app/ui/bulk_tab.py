@@ -65,6 +65,13 @@ class BulkTab:
             expand=True,
             on_click=self._on_generate_click,
         )
+        self._stop_btn = ft.OutlinedButton(
+            "■  Stop",
+            disabled=True,
+            on_click=self._on_stop_click,
+        )
+        self._generation_task: asyncio.Task[object] | None = None
+        self._stop_requested = False
 
         self._content = self._build()
 
@@ -161,7 +168,7 @@ class BulkTab:
             text = (edit_field.value or "").strip()
             if text:
                 self._state.bulk_items[idx]["text"] = text
-                self._state.bulk_items[idx]["status"] = "Pending"
+                self._state.bulk_items[idx]["status"] = "Pending Start"
             self._invalidate_eta()
             self._rebuild_table()
             self._page.update()
@@ -213,7 +220,7 @@ class BulkTab:
         def on_add() -> None:
             txt = (add_field.value or "").strip()
             if txt:
-                self._state.bulk_items.append({"text": txt, "status": "Pending"})
+                self._state.bulk_items.append({"text": txt, "status": "Pending Start"})
                 self._invalidate_eta()
                 self._rebuild_table()
                 self._page.update()
@@ -239,7 +246,7 @@ class BulkTab:
                 with open(path, "r", encoding="utf-8") as fh:
                     lines = [ln.strip() for ln in fh if ln.strip()]
                 for line in lines:
-                    self._state.bulk_items.append({"text": line, "status": "Pending"})
+                    self._state.bulk_items.append({"text": line, "status": "Pending Start"})
                 self._invalidate_eta()
                 self._rebuild_table()
                 self._page.update()
@@ -292,7 +299,7 @@ class BulkTab:
         retry_count = 0
         for item in self._state.bulk_items:
             if self._is_error_status(item["status"]):
-                item["status"] = "Pending"
+                item["status"] = "Pending Start"
                 retry_count += 1
 
         if retry_count == 0:
@@ -305,13 +312,27 @@ class BulkTab:
         item_label = "item" if retry_count == 1 else "items"
         snack(self._page, f"Re-queued {retry_count} failed {item_label}.", error=False)
 
+    def _on_stop_click(self) -> None:
+        task = self._generation_task
+        if task is None or task.done():
+            return
+
+        self._stop_requested = True
+        self._stop_btn.disabled = True
+        self._status.value = "Stopping…"
+        self._page.update()
+        task.cancel()
+
     async def _on_generate_click(self) -> None:
+        if self._generation_task is not None and not self._generation_task.done():
+            return
+
         voice = self._voice.selected_voice
         folder = (self._folder_field.value or "").strip()
         queued_items = [
             (index, item)
             for index, item in enumerate(self._state.bulk_items)
-            if item["status"] == "Pending"
+            if item["status"] == "Pending Start"
         ]
 
         if not self._state.bulk_items:
@@ -333,6 +354,7 @@ class BulkTab:
         total = len(queued_items)
         done = 0
         self._generate_btn.disabled = True
+        self._stop_btn.disabled = False
         self._progress.visible = True
         self._progress.value = 0
         self._status.value = "Starting…"
@@ -344,53 +366,88 @@ class BulkTab:
         pitch = self._prosody.pitch
         make_srt = bool(self._srt_check.value)
         total_generation_seconds = 0.0
+        generation_task = asyncio.current_task()
+        self._generation_task = generation_task
+        stopped = False
 
-        for i, (item_index, item) in enumerate(queued_items):
-            item["status"] = "Generating"
-            self._rebuild_table()
-            self._status.value = f"Processing {i + 1} / {total}…"
-            self._page.update()
+        try:
+            for i, (item_index, item) in enumerate(queued_items):
+                if self._stop_requested:
+                    stopped = True
+                    break
 
-            voice_name = tts.sanitize_name(voice)
-            filename = (
-                f"{item_index + 1:03d}_{tts.sanitize_name(item['text'])}_{voice_name}.mp3"
-            )
-            out_path = os.path.join(folder, filename)
-            item_started = perf_counter()
+                item["status"] = "Generating"
+                self._rebuild_table()
+                self._status.value = f"Processing {i + 1} / {total}…"
+                self._page.update()
 
-            try:
-                await tts.generate(item["text"], voice, rate, vol, pitch, out_path, srt=make_srt)
-                item["status"] = "Done"
-                done += 1
-            except Exception as ex:
-                item["status"] = f"Error: {str(ex)[:50]}"
-            finally:
-                total_generation_seconds += perf_counter() - item_started
+                voice_name = tts.sanitize_name(voice)
+                filename = (
+                    f"{item_index + 1:03d}_{tts.sanitize_name(item['text'])}_{voice_name}.mp3"
+                )
+                out_path = os.path.join(folder, filename)
+                item_started = perf_counter()
 
-            self._progress.value = (i + 1) / total
-            remaining_items = total - (i + 1)
-            if remaining_items > 0:
-                average_generation_seconds = total_generation_seconds / (i + 1)
-                self._set_eta(
-                    (average_generation_seconds * remaining_items)
-                    + (BULK_DELAY_SECONDS * remaining_items)
+                try:
+                    await tts.generate(
+                        item["text"], voice, rate, vol, pitch, out_path, srt=make_srt
+                    )
+                    if self._stop_requested:
+                        item["status"] = "Pending Start"
+                        stopped = True
+                        break
+                    item["status"] = "Done"
+                    done += 1
+                except asyncio.CancelledError:
+                    item["status"] = "Pending Start"
+                    raise
+                except Exception as ex:
+                    item["status"] = f"Error: {str(ex)[:50]}"
+                finally:
+                    total_generation_seconds += perf_counter() - item_started
+
+                self._progress.value = (i + 1) / total
+                remaining_items = total - (i + 1)
+                if remaining_items > 0:
+                    average_generation_seconds = total_generation_seconds / (i + 1)
+                    self._set_eta(
+                        (average_generation_seconds * remaining_items)
+                        + (BULK_DELAY_SECONDS * remaining_items)
+                    )
+                else:
+                    self._set_eta(0)
+                self._rebuild_table()
+                self._page.update()
+
+                if remaining_items > 0:
+                    self._status.value = (
+                        f"Cooling down for {self._format_eta(BULK_DELAY_SECONDS)} before next item…"
+                    )
+                    self._page.update()
+                    await asyncio.sleep(BULK_DELAY_SECONDS)
+        except asyncio.CancelledError:
+            stopped = True
+            for item in self._state.bulk_items:
+                if item["status"] == "Generating":
+                    item["status"] = "Pending Start"
+        finally:
+            if self._generation_task is generation_task:
+                self._generation_task = None
+            self._stop_requested = False
+            self._generate_btn.disabled = False
+            self._stop_btn.disabled = True
+            self._progress.visible = False
+            if stopped:
+                self._status.value = (
+                    f"■ Stopped — {done}/{total} queued item(s) generated. "
+                    "Pending items remain queued."
                 )
             else:
-                self._set_eta(0)
+                self._status.value = (
+                    f"✓ Finished — {done}/{total} queued item(s) generated in {folder}"
+                )
             self._rebuild_table()
             self._page.update()
-
-            if remaining_items > 0:
-                self._status.value = (
-                    f"Cooling down for {self._format_eta(BULK_DELAY_SECONDS)} before next item…"
-                )
-                self._page.update()
-                await asyncio.sleep(BULK_DELAY_SECONDS)
-
-        self._generate_btn.disabled = False
-        self._progress.visible = False
-        self._status.value = f"✓ Finished — {done}/{total} queued item(s) generated in {folder}"
-        self._page.update()
 
     # ── Layout ────────────────────────────────────────────────────────
 
@@ -419,6 +476,7 @@ class BulkTab:
         )
         action_controls = as_controls(
             self._generate_btn,
+            self._stop_btn,
             self._count_text,
             self._eta_field,
         )
