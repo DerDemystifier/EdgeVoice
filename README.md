@@ -93,13 +93,11 @@ python main.py
 ## Building the Windows app
 
 Build the packaged desktop application from the repository root after installing the dependencies.
-The PyInstaller spec includes `icon.ico` both as the executable icon and as a runtime file so Flet
-can use it for the window and taskbar icon.
+The PyInstaller spec includes `icon.ico` both as the executable icon and as a runtime file so Flet can use it for the window and taskbar icon.
 
 ### VS Code
 
-Run the **Build EdgeVoice (PyInstaller)** task from the Command Palette. The packaged application
-will be created at `dist\EdgeVoice\EdgeVoice.exe`.
+Run the **Build EdgeVoice (PyInstaller)** task from the Command Palette. The packaged application will be created at `dist\EdgeVoice\EdgeVoice.exe`.
 
 ### PowerShell
 
@@ -107,8 +105,7 @@ will be created at `dist\EdgeVoice\EdgeVoice.exe`.
 & .\.venv\Scripts\pyinstaller.exe --noconfirm EdgeVoice.spec
 ```
 
-The `dist\EdgeVoice` folder contains the executable and its runtime files. Run
-`dist\EdgeVoice\EdgeVoice.exe` to launch the packaged app.
+The `dist\EdgeVoice` folder contains the executable and its runtime files. Run `dist\EdgeVoice\EdgeVoice.exe` to launch the packaged app.
 
 ---
 

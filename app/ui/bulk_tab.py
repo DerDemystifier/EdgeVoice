@@ -76,7 +76,9 @@ class BulkTab:
         )
         self._generation_task: asyncio.Task[object] | None = None
         self._stop_requested = False
-        self._recent_generation_seconds: deque[float] = deque(maxlen=RECENT_OPERATION_LIMIT)
+        self._recent_generation_starts: deque[float] = deque(
+            maxlen=RECENT_OPERATION_LIMIT
+        )
 
         self._content = self._build()
 
@@ -364,6 +366,7 @@ class BulkTab:
         self._progress.value = 0
         self._status.value = "Starting…"
         self._set_eta(None)
+        self._recent_generation_starts.clear()
         self._page.update()
 
         rate = self._prosody.rate
@@ -391,7 +394,7 @@ class BulkTab:
                 )
                 out_path = os.path.join(folder, filename)
                 item_started = perf_counter()
-                operation_cancelled = False
+                self._recent_generation_starts.append(item_started)
 
                 try:
                     await tts.generate(
@@ -404,25 +407,23 @@ class BulkTab:
                     item["status"] = "Done"
                     done += 1
                 except asyncio.CancelledError:
-                    operation_cancelled = True
+                    if self._recent_generation_starts[-1] == item_started:
+                        self._recent_generation_starts.pop()
                     item["status"] = "Pending Start"
                     raise
                 except Exception as ex:
                     item["status"] = f"Error: {str(ex)[:50]}"
-                finally:
-                    if not operation_cancelled:
-                        self._recent_generation_seconds.append(perf_counter() - item_started)
 
                 self._progress.value = (i + 1) / total
                 remaining_items = total - (i + 1)
                 if remaining_items > 0:
-                    average_generation_seconds = sum(self._recent_generation_seconds) / len(
-                        self._recent_generation_seconds
+                    elapsed_window_seconds = (
+                        perf_counter() - self._recent_generation_starts[0]
                     )
-                    self._set_eta(
-                        (average_generation_seconds * remaining_items)
-                        + (BULK_DELAY_SECONDS * remaining_items)
+                    average_item_seconds = elapsed_window_seconds / len(
+                        self._recent_generation_starts
                     )
+                    self._set_eta(average_item_seconds * remaining_items)
                 else:
                     self._set_eta(0)
                 self._rebuild_table()
