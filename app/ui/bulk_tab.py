@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 import math
 import os
 from functools import partial
@@ -17,6 +18,7 @@ from .prosody_panel import ProsodyPanel
 from .voice_panel import VoicePanel
 
 BULK_DELAY_SECONDS = 1.0
+RECENT_OPERATION_LIMIT = 10
 
 
 class BulkTab:
@@ -38,7 +40,9 @@ class BulkTab:
         self._status = ft.Text("", color=ft.Colors.SECONDARY, italic=True)
         self._progress = ft.ProgressBar(visible=False, value=0)
         self._count_text = ft.Text("0 / 0", color=ft.Colors.SECONDARY)
-        self._eta_field = ft.TextField(label="ETA", value="—", width=130, read_only=True)
+        self._eta_field = ft.TextField(
+            label="ETA", value="—", width=130, read_only=True
+        )
         self._folder_field = ft.TextField(
             label="Output folder",
             expand=True,
@@ -72,6 +76,7 @@ class BulkTab:
         )
         self._generation_task: asyncio.Task[object] | None = None
         self._stop_requested = False
+        self._recent_generation_seconds: deque[float] = deque(maxlen=RECENT_OPERATION_LIMIT)
 
         self._content = self._build()
 
@@ -365,7 +370,6 @@ class BulkTab:
         vol = self._prosody.vol
         pitch = self._prosody.pitch
         make_srt = bool(self._srt_check.value)
-        total_generation_seconds = 0.0
         generation_task = asyncio.current_task()
         self._generation_task = generation_task
         stopped = False
@@ -387,6 +391,7 @@ class BulkTab:
                 )
                 out_path = os.path.join(folder, filename)
                 item_started = perf_counter()
+                operation_cancelled = False
 
                 try:
                     await tts.generate(
@@ -399,17 +404,21 @@ class BulkTab:
                     item["status"] = "Done"
                     done += 1
                 except asyncio.CancelledError:
+                    operation_cancelled = True
                     item["status"] = "Pending Start"
                     raise
                 except Exception as ex:
                     item["status"] = f"Error: {str(ex)[:50]}"
                 finally:
-                    total_generation_seconds += perf_counter() - item_started
+                    if not operation_cancelled:
+                        self._recent_generation_seconds.append(perf_counter() - item_started)
 
                 self._progress.value = (i + 1) / total
                 remaining_items = total - (i + 1)
                 if remaining_items > 0:
-                    average_generation_seconds = total_generation_seconds / (i + 1)
+                    average_generation_seconds = sum(self._recent_generation_seconds) / len(
+                        self._recent_generation_seconds
+                    )
                     self._set_eta(
                         (average_generation_seconds * remaining_items)
                         + (BULK_DELAY_SECONDS * remaining_items)
